@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-<title>Chancletes y Chaletes</title>
+<script>if(location.protocol==='http:'){location.replace('https://'+location.href.slice(7));}</script><title>Chancletes y Chaletes</title>
 <style>
 * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
 html, body { height: 100%; overflow: hidden; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; color: #111; background: #fff; }
@@ -833,7 +833,8 @@ function updateAutocomplete(){
   _acTimer=setTimeout(function(){
     if(seq!==_acSeq) return; // newer search superseded this one
     // Use lrclib search - it indexes both titles and lyrics
-    fetch('https://lrclib.net/api/search?q='+encodeURIComponent(val))
+    fetch('https://lrclib.net/api/search?q='+encodeURIComponent(val),
+      {headers:{'Lrclib-Client':'KaraokeApp/1.0'}})
     .then(function(r){return r.ok?r.json():[];})
     .then(function(arr){
       if(seq!==_acSeq||!arr||!arr.length) return;
@@ -886,12 +887,12 @@ function manualSearch(){
   list.style.display='none';list.innerHTML='';
   document.getElementById('manual-input').classList.remove('dropdown-open');
   setMsg('idle-msg','Buscando...','info');
-  fetch('https://lrclib.net/api/search?q='+encodeURIComponent(val))
+  fetch('https://lrclib.net/api/search?q='+encodeURIComponent(val),{headers:{'Lrclib-Client':'KaraokeApp/1.0'}})
     .then(function(r){return r.ok?r.json():[];})
     .then(function(arr){
       if(!arr||!arr.length){
         setMsg('idle-msg','Buscando por letra...','info');
-        return fetch('https://lrclib.net/api/search?q='+encodeURIComponent(val)+'&type=lyrics')
+        return fetch('https://lrclib.net/api/search?q='+encodeURIComponent(val)+'&type=lyrics',{headers:{'Lrclib-Client':'KaraokeApp/1.0'}})
           .then(function(r){return r.ok?r.json():[];});
       }
       return arr;
@@ -923,7 +924,7 @@ function manualSearch(){
 
 function searchLrclib(val){
   var parts=val.split(/\s*-\s*/);var qa=parts.length>1?parts[parts.length-1]:'';
-  return fetch('https://lrclib.net/api/search?q='+encodeURIComponent(val))
+  return fetch('https://lrclib.net/api/search?q='+encodeURIComponent(val),{headers:{'Lrclib-Client':'KaraokeApp/1.0'}})
     .then(function(r){return r.ok?r.json():[];})
     .then(function(arr){
       if(!arr||arr.length===0)return false;
@@ -999,13 +1000,13 @@ function showFoundAndLoad(title,artist,lrcId){
 }
 function fetchLyrics(lrcId){
   if(lrcId&&typeof lrcId==='number'){
-    return fetch('https://lrclib.net/api/get/'+lrcId)
+    return fetch('https://lrclib.net/api/get/'+lrcId,{headers:{'Lrclib-Client':'KaraokeApp/1.0'}})
       .then(function(r){return r.ok?r.json():null;})
       .then(function(d){if(d&&d.syncedLyrics)return parseLRC(d.syncedLyrics);if(d&&d.plainLyrics)return buildPlain(d.plainLyrics);return searchLrclibLyrics();});
   }
   return searchLrclibLyrics();
 }
-function lrclibFetch(url){return fetch(url).then(function(r){return r.ok?r.json():[];}).catch(function(){return[];});}
+function lrclibFetch(url,h){return fetch(url,{headers:h}).then(function(r){return r.ok?r.json():[];}).catch(function(){return[];});}
 function pickBest(arr){
   if(!arr||!arr.length)return null;
   arr.sort(function(a,b){return score(a,song.artist)-score(b,song.artist);});
@@ -1014,7 +1015,7 @@ function pickBest(arr){
   return null;
 }
 function searchLrclibLyrics(){
-  var base='https://lrclib.net/api/search';
+  var h={'Lrclib-Client':'KaraokeApp/1.0'},base='https://lrclib.net/api/search';
   var title=song.title,artist=song.artist||'';
   // Try 1: exact track_name + artist_name
   var url1=artist?base+'?track_name='+encodeURIComponent(title)+'&artist_name='+encodeURIComponent(artist):base+'?q='+encodeURIComponent(title);
@@ -1022,13 +1023,13 @@ function searchLrclibLyrics(){
   var url2=base+'?q='+encodeURIComponent(title+(artist?' '+artist:''));
   // Try 3: q=title only (ignore artist, find any version)
   var url3=base+'?q='+encodeURIComponent(title);
-  return lrclibFetch(url1).then(function(arr){
+  return lrclibFetch(url1,h).then(function(arr){
     var r=pickBest(arr);
     if(r)return r;
-    return lrclibFetch(url2).then(function(arr2){
+    return lrclibFetch(url2,h).then(function(arr2){
       var r2=pickBest(arr2);
       if(r2)return r2;
-      return lrclibFetch(url3).then(function(arr3){
+      return lrclibFetch(url3,h).then(function(arr3){
         return pickBest(arr3);
       });
     });
