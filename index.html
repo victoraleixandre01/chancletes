@@ -326,6 +326,16 @@ html, body { height: 100%; overflow: hidden; font-family: -apple-system, BlinkMa
 
 <script>
 var song={};
+var SPEED=[0.5,0.75,1,1.25,1.5,2];
+var speedIdx=2;
+var lyrics=[];
+var kTimer=null;
+var currentY=0;
+var manualOffset=0;
+var userScrolling=false;
+var touchStartY=0;
+var lineOffsets=[];
+var currentLineIdx=0;
 
 'use strict';
 var REPERTORIO = [
@@ -835,7 +845,7 @@ function updateAutocomplete(){
     if(seq!==_acSeq) return; // newer search superseded this one
     // Use lrclib search - it indexes both titles and lyrics
     fetch('https://lrclib.net/api/search?q='+encodeURIComponent(val),
-      {headers:{'Lrclib-Client':'KaraokeApp/1.0'}})
+      {headers:{'Lrclib-Client':'KaraokeApp/1.0'},mode:'cors'})
     .then(function(r){return r.ok?r.json():[];})
     .then(function(arr){
       if(seq!==_acSeq||!arr||!arr.length) return;
@@ -888,12 +898,12 @@ function manualSearch(){
   list.style.display='none';list.innerHTML='';
   document.getElementById('manual-input').classList.remove('dropdown-open');
   setMsg('idle-msg','Buscando...','info');
-  fetch('https://lrclib.net/api/search?q='+encodeURIComponent(val),{headers:{'Lrclib-Client':'KaraokeApp/1.0'}})
+  fetch('https://lrclib.net/api/search?q='+encodeURIComponent(val),{headers:{'Lrclib-Client':'KaraokeApp/1.0'},mode:'cors'})
     .then(function(r){return r.ok?r.json():[];})
     .then(function(arr){
       if(!arr||!arr.length){
         setMsg('idle-msg','Buscando por letra...','info');
-        return fetch('https://lrclib.net/api/search?q='+encodeURIComponent(val)+'&type=lyrics',{headers:{'Lrclib-Client':'KaraokeApp/1.0'}})
+        return fetch('https://lrclib.net/api/search?q='+encodeURIComponent(val)+'&type=lyrics',{headers:{'Lrclib-Client':'KaraokeApp/1.0'},mode:'cors'})
           .then(function(r){return r.ok?r.json():[];});
       }
       return arr;
@@ -925,7 +935,7 @@ function manualSearch(){
 
 function searchLrclib(val){
   var parts=val.split(/\s*-\s*/);var qa=parts.length>1?parts[parts.length-1]:'';
-  return fetch('https://lrclib.net/api/search?q='+encodeURIComponent(val),{headers:{'Lrclib-Client':'KaraokeApp/1.0'}})
+  return fetch('https://lrclib.net/api/search?q='+encodeURIComponent(val),{headers:{'Lrclib-Client':'KaraokeApp/1.0'},mode:'cors'})
     .then(function(r){return r.ok?r.json():[];})
     .then(function(arr){
       if(!arr||arr.length===0)return false;
@@ -997,11 +1007,11 @@ function showFoundAndLoad(title,artist,lrcId){
     document.getElementById('loading-lyrics').style.display='none';
     if(!result||result.length===0){setMsg('found-msg','⚠️ No se encontró letra.');document.getElementById('found-btns').style.display='flex';return;}
     lyrics=result;beginKaraoke();
-  }).catch(function(){document.getElementById('loading-lyrics').style.display='none';setMsg('found-msg','⚠️ Error de red.');document.getElementById('found-btns').style.display='flex';});
+  }).catch(function(e){document.getElementById('loading-lyrics').style.display='none';setMsg('found-msg','⚠️ '+( e&&e.message?e.message:'Error de red.'));document.getElementById('found-btns').style.display='flex';});
 }
 function fetchLyrics(lrcId){
   if(lrcId&&typeof lrcId==='number'){
-    return fetch('https://lrclib.net/api/get/'+lrcId,{headers:{'Lrclib-Client':'KaraokeApp/1.0'}})
+    return fetch('https://lrclib.net/api/get/'+lrcId,{headers:{'Lrclib-Client':'KaraokeApp/1.0'},mode:'cors'})
       .then(function(r){return r.ok?r.json():null;})
       .then(function(d){if(d&&d.syncedLyrics)return parseLRC(d.syncedLyrics);if(d&&d.plainLyrics)return buildPlain(d.plainLyrics);return searchLrclibLyrics();});
   }
